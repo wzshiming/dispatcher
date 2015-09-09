@@ -2,15 +2,16 @@ package dispatcher
 
 type Events interface {
 	dispatchEvent(event *event)
-	AddEventUnlike(eventName string, callback interface{})
-	AddEvent(eventName string, callback interface{})
-	RemoveEvent(eventName string, callback interface{})
-	OnlyOnce(eventName string, callback interface{})
+	AddEvent(eventName string, callback interface{}, token ...interface{})
+	OnlyOnce(eventName string, callback interface{}, token ...interface{})
+	OnlyTimes(eventName string, size int, callback interface{}, token ...interface{})
+	RemoveEvent(eventName string, callback interface{}, token ...interface{})
+	Range(eventin, eventout string, events map[string]interface{}, token ...interface{})
 	StopOnce(eventName string)
+	IsOpen(eventName string) bool
 	CloseEvent(eventName string)
 	OpenEvent(eventName string)
 	Dispatch(eventName string, args ...interface{})
-	Range(eventin, eventout string, events map[string]interface{})
 	EmptyEvent(eventName string)
 	Empty()
 	GetFork() Fork

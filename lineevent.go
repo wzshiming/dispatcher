@@ -17,12 +17,12 @@ type chain struct {
 	f int
 }
 type LineEventChain struct {
-	callbacks []chain
+	callbacks map[string]*chain
 	f         int
 }
 
 func newLineEventChain() *LineEventChain {
-	return &LineEventChain{callbacks: []chain{}}
+	return &LineEventChain{callbacks: map[string]*chain{}}
 }
 
 type event struct {
@@ -82,7 +82,8 @@ func (t *LineEvent) dispatchEvent(even *event) {
 						if item.f == 1 {
 							t.RemoveEvent(even.eventName, item.v.Interface())
 						} else if item.f > 1 {
-							eventChain.callbacks[k].f--
+							item.f--
+
 						}
 					case reflect.String:
 						t.dispatchEvent(even.clone(item.v.String()))
@@ -90,7 +91,7 @@ func (t *LineEvent) dispatchEvent(even *event) {
 						if v, ok := item.v.Interface().(Events); ok {
 							v.dispatchEvent(even)
 						} else {
-							t.removeEvent(even.eventName, k)
+							t.RemoveEvent(even.eventName, k)
 						}
 					}
 				}
@@ -116,69 +117,66 @@ func (t *LineEvent) getChain(eventName string) *LineEventChain {
 	return eventChain
 }
 
-func (t *LineEvent) addEvent(eventName string, callback interface{}, size int, same bool) {
-	//	t.fork.Push(func() {
-	eventChain := t.getChain(eventName)
-	elem := reflect.ValueOf(callback)
-	typ := elem.Type()
-
-	switch typ.Kind() {
-	case reflect.Func:
-		if !same {
-			for _, item := range eventChain.callbacks {
-				if item.v.Kind() == reflect.Func && item.v.Pointer() == elem.Pointer() {
-					fmt.Printf("Repeat to added function %v to the same event ", callback)
-					return
-				}
-			}
-		}
+func (t *LineEvent) code(i interface{}) (s string) {
+	elem := reflect.ValueOf(i)
+	switch elem.Kind() {
 	case reflect.String:
-		if !same {
-			for _, item := range eventChain.callbacks {
-				if item.v.Kind() == reflect.String && item.v.String() == elem.String() {
-					fmt.Printf("Repeat to added String %v to the same event ", callback)
-					return
-				}
-			}
-		}
-
+		s = "__" + elem.String()
+	case reflect.Chan, reflect.Func, reflect.Map, reflect.Ptr, reflect.Slice, reflect.UnsafePointer:
+		s = fmt.Sprint("_", elem.Pointer())
 	default:
-		if _, ok := callback.(Events); ok {
-			for _, item := range eventChain.callbacks {
-				if item.v.Kind() == reflect.Interface && item.v.Interface() == elem.Interface() {
-					fmt.Printf("Repeat to added Events %v to the same event ", callback)
-					return
-				}
-			}
-		} else {
-			fmt.Printf("unsustained to added %v to the same event ", callback)
-			return
-		}
+		s = fmt.Sprintln("__", i)
 	}
-	eventChain.callbacks = append(eventChain.callbacks, chain{
-		v: &elem,
-		f: size,
-	})
-	//	})
 	return
 }
 
-func (t *LineEvent) AddEventUnlike(eventName string, callback interface{}) {
-	t.addEvent(eventName, callback, 0, false)
+func (t *LineEvent) codes(i interface{}, j []interface{}) string {
+	k := t.code(i)
+	for _, v := range j {
+		k += t.code(v)
+	}
+	return k
 }
 
-func (t *LineEvent) AddEvent(eventName string, callback interface{}) {
-	t.addEvent(eventName, callback, 0, true)
+func (t *LineEvent) addEvent(eventName string, size int, callback interface{}, token ...interface{}) {
+	eventChain := t.getChain(eventName)
+	elem := reflect.ValueOf(callback)
+
+	k := t.codes(callback, token)
+
+	if eventChain.callbacks[k] != nil {
+		return
+	}
+	eventChain.callbacks[k] = &chain{
+		v: &elem,
+		f: size,
+	}
+	return
 }
 
-func (t *LineEvent) OnlyOnce(eventName string, callback interface{}) {
-	t.addEvent(eventName, callback, 1, true)
+func (t *LineEvent) AddEvent(eventName string, callback interface{}, token ...interface{}) {
+	t.addEvent(eventName, 0, callback, token...)
+}
+
+func (t *LineEvent) OnlyOnce(eventName string, callback interface{}, token ...interface{}) {
+	t.addEvent(eventName, 1, callback, token...)
+}
+
+func (t *LineEvent) OnlyTimes(eventName string, size int, callback interface{}, token ...interface{}) {
+	t.addEvent(eventName, size, callback, token...)
 }
 
 func (t *LineEvent) StopOnce(eventName string) {
 	if t.listeners[eventName] != nil {
 		t.listeners[eventName].f = 1
 	}
+}
+
+func (t *LineEvent) IsOpen(eventName string) bool {
+	if t.listeners[eventName] != nil {
+		return 0 == t.listeners[eventName].f
+	}
+	return true
 }
 
 func (t *LineEvent) CloseEvent(eventName string) {
@@ -193,47 +191,17 @@ func (t *LineEvent) OpenEvent(eventName string) {
 	}
 }
 
-func (t *LineEvent) removeEvent(eventName string, index int) {
-	eventChain := t.listeners[eventName]
-	if len(eventChain.callbacks) == 0 {
-		return
-	} else if len(eventChain.callbacks) == 1 {
-		t.listeners[eventName] = newLineEventChain()
-	} else {
-		eventChain.callbacks = append(eventChain.callbacks[:index], eventChain.callbacks[index+1:]...)
+func (t *LineEvent) removeEvent(eventName string, index string) {
+	if eventChain, ok := t.listeners[eventName]; ok && eventChain.callbacks != nil {
+		delete(eventChain.callbacks, index)
 	}
-	//eventChain.callbacks = append(eventChain.callbacks[:index], eventChain.callbacks[index+1:]...)
 }
-func (t *LineEvent) RemoveEvent(eventName string, callback interface{}) {
-	//	t.fork.Push(func() {
-	b := reflect.ValueOf(callback)
-	eventChain, ok := t.listeners[eventName]
-	if !ok {
-		return
+
+func (t *LineEvent) RemoveEvent(eventName string, callback interface{}, token ...interface{}) {
+	if eventChain, ok := t.listeners[eventName]; ok && eventChain.callbacks != nil {
+		k := t.codes(callback, token)
+		delete(eventChain.callbacks, k)
 	}
-	switch b.Kind() {
-	case reflect.Func:
-		for k, item := range eventChain.callbacks {
-			if item.v.Kind() == reflect.Func && item.v.Pointer() == b.Pointer() {
-				t.removeEvent(eventName, k)
-			}
-		}
-	case reflect.String:
-		for k, item := range eventChain.callbacks {
-			if item.v.Kind() == reflect.String && item.v.String() == b.String() {
-				t.removeEvent(eventName, k)
-			}
-		}
-	default:
-		if _, ok := callback.(Events); ok {
-			for k, item := range eventChain.callbacks {
-				if item.v.Kind() == reflect.Interface && item.v.Interface() == b.Interface() {
-					t.removeEvent(eventName, k)
-				}
-			}
-		}
-	}
-	//	})
 }
 
 func (t *LineEvent) Dispatch(eventName string, args ...interface{}) {
@@ -248,15 +216,15 @@ func (t *LineEvent) EmptyEvent(eventName string) {
 	delete(t.listeners, eventName)
 }
 
-func (t *LineEvent) Range(eventin, eventout string, events map[string]interface{}) {
+func (t *LineEvent) Range(eventin, eventout string, events map[string]interface{}, token ...interface{}) {
 	t.AddEvent(eventin, func() {
 		for k, v := range events {
-			t.AddEvent(k, v)
+			t.AddEvent(k, v, token...)
 		}
 	})
 	t.AddEvent(eventout, func() {
 		for k, v := range events {
-			t.RemoveEvent(k, v)
+			t.RemoveEvent(k, v, token...)
 		}
 	})
 }
