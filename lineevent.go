@@ -85,7 +85,8 @@ func (t *LineEvent) dispatchEvent(even *event) {
 						if v, ok := item.v.Interface().(Events); ok {
 							v.dispatchEvent(even)
 						} else {
-							t.RemoveEvent(even.eventName, k)
+							t.removeEvent(even.eventName, k)
+							continue
 						}
 					}
 					if item.f != 0 {
@@ -138,7 +139,7 @@ func (t *LineEvent) codes(i interface{}, j []interface{}) string {
 	return k
 }
 
-func (t *LineEvent) addEvent(eventName string, size int, callback interface{}, token ...interface{}) {
+func (t *LineEvent) addEvent(eventName string, size int, callback interface{}, token []interface{}) {
 	eventChain := t.getChain(eventName)
 	elem := reflect.ValueOf(callback)
 
@@ -155,15 +156,15 @@ func (t *LineEvent) addEvent(eventName string, size int, callback interface{}, t
 }
 
 func (t *LineEvent) AddEvent(eventName string, callback interface{}, token ...interface{}) {
-	t.addEvent(eventName, 0, callback, token...)
+	t.addEvent(eventName, 0, callback, token)
 }
 
 func (t *LineEvent) OnlyOnce(eventName string, callback interface{}, token ...interface{}) {
-	t.addEvent(eventName, 1, callback, token...)
+	t.addEvent(eventName, 1, callback, token)
 }
 
 func (t *LineEvent) OnlyTimes(eventName string, size int, callback interface{}, token ...interface{}) {
-	t.addEvent(eventName, size, callback, token...)
+	t.addEvent(eventName, size, callback, token)
 }
 
 func (t *LineEvent) StopOnce(eventName string) {
