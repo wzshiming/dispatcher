@@ -79,12 +79,6 @@ func (t *LineEvent) dispatchEvent(even *event) {
 							args = append(args, arg)
 						}
 						elem.Call(args)
-						if item.f == 1 {
-							t.RemoveEvent(even.eventName, item.v.Interface())
-						} else if item.f > 1 {
-							item.f--
-
-						}
 					case reflect.String:
 						t.dispatchEvent(even.clone(item.v.String()))
 					default:
@@ -92,6 +86,12 @@ func (t *LineEvent) dispatchEvent(even *event) {
 							v.dispatchEvent(even)
 						} else {
 							t.RemoveEvent(even.eventName, k)
+						}
+					}
+					if item.f != 0 {
+						item.f--
+						if item.f == 0 {
+							t.removeEvent(even.eventName, k)
 						}
 					}
 				}
@@ -121,7 +121,7 @@ func (t *LineEvent) code(i interface{}) (s string) {
 	elem := reflect.ValueOf(i)
 	switch elem.Kind() {
 	case reflect.String:
-		s = "__" + elem.String()
+		s = "___" + elem.String()
 	case reflect.Chan, reflect.Func, reflect.Map, reflect.Ptr, reflect.Slice, reflect.UnsafePointer:
 		s = fmt.Sprint("_", elem.Pointer())
 	default:
@@ -198,10 +198,7 @@ func (t *LineEvent) removeEvent(eventName string, index string) {
 }
 
 func (t *LineEvent) RemoveEvent(eventName string, callback interface{}, token ...interface{}) {
-	if eventChain, ok := t.listeners[eventName]; ok && eventChain.callbacks != nil {
-		k := t.codes(callback, token)
-		delete(eventChain.callbacks, k)
-	}
+	t.removeEvent(eventName, t.codes(callback, token))
 }
 
 func (t *LineEvent) Dispatch(eventName string, args ...interface{}) {
