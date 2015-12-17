@@ -85,14 +85,14 @@ func (t *LineEvent) dispatchEvent(even *event) {
 						if v, ok := item.v.Interface().(Events); ok {
 							v.dispatchEvent(even)
 						} else {
-							t.removeEvent(even.eventName, k)
+							t.RemoveEventIndex(even.eventName, k)
 							continue
 						}
 					}
 					if item.f != 0 {
 						item.f--
 						if item.f == 0 {
-							t.removeEvent(even.eventName, k)
+							t.RemoveEventIndex(even.eventName, k)
 						}
 					}
 				}
@@ -102,10 +102,10 @@ func (t *LineEvent) dispatchEvent(even *event) {
 	t.fork.Join()
 }
 
-func (t *LineEvent) ForEventEach(eventName string, f func(interface{})) {
+func (t *LineEvent) ForEventEach(eventName string, f func(string, interface{})) {
 	eventChain := t.getChain(eventName)
-	for _, item := range eventChain.callbacks {
-		f(item.v.Interface())
+	for k, item := range eventChain.callbacks {
+		f(k, item.v.Interface())
 	}
 }
 
@@ -139,32 +139,32 @@ func (t *LineEvent) codes(i interface{}, j []interface{}) string {
 	return k
 }
 
-func (t *LineEvent) addEvent(eventName string, size int, callback interface{}, token []interface{}) {
+func (t *LineEvent) addEvent(eventName string, size int, callback interface{}, token []interface{}) string {
 	eventChain := t.getChain(eventName)
 	elem := reflect.ValueOf(callback)
 
 	k := t.codes(callback, token)
 
 	if eventChain.callbacks[k] != nil {
-		return
+		return k
 	}
 	eventChain.callbacks[k] = &chain{
 		v: &elem,
 		f: size,
 	}
-	return
+	return k
 }
 
-func (t *LineEvent) AddEvent(eventName string, callback interface{}, token ...interface{}) {
-	t.addEvent(eventName, 0, callback, token)
+func (t *LineEvent) AddEvent(eventName string, callback interface{}, token ...interface{}) string {
+	return t.addEvent(eventName, 0, callback, token)
 }
 
-func (t *LineEvent) OnlyOnce(eventName string, callback interface{}, token ...interface{}) {
-	t.addEvent(eventName, 1, callback, token)
+func (t *LineEvent) OnlyOnce(eventName string, callback interface{}, token ...interface{}) string {
+	return t.addEvent(eventName, 1, callback, token)
 }
 
-func (t *LineEvent) OnlyTimes(eventName string, size int, callback interface{}, token ...interface{}) {
-	t.addEvent(eventName, size, callback, token)
+func (t *LineEvent) OnlyTimes(eventName string, size int, callback interface{}, token ...interface{}) string {
+	return t.addEvent(eventName, size, callback, token)
 }
 
 func (t *LineEvent) StopOnce(eventName string) {
@@ -192,14 +192,21 @@ func (t *LineEvent) OpenEvent(eventName string) {
 	}
 }
 
-func (t *LineEvent) removeEvent(eventName string, index string) {
+func (t *LineEvent) RemoveEventIndex(eventName string, index string) {
 	if eventChain, ok := t.listeners[eventName]; ok && eventChain.callbacks != nil {
 		delete(eventChain.callbacks, index)
 	}
 }
 
+func (t *LineEvent) EventSize(eventName string) int {
+	if eventChain, ok := t.listeners[eventName]; ok && eventChain.callbacks != nil {
+		return len(eventChain.callbacks)
+	}
+	return 0
+}
+
 func (t *LineEvent) RemoveEvent(eventName string, callback interface{}, token ...interface{}) {
-	t.removeEvent(eventName, t.codes(callback, token))
+	t.RemoveEventIndex(eventName, t.codes(callback, token))
 }
 
 func (t *LineEvent) Dispatch(eventName string, args ...interface{}) {
@@ -215,14 +222,42 @@ func (t *LineEvent) EmptyEvent(eventName string) {
 }
 
 func (t *LineEvent) Range(eventin, eventout string, events map[string]interface{}, token ...interface{}) {
-	t.AddEvent(eventin, func() {
+	if eventin == "" {
 		for k, v := range events {
 			t.AddEvent(k, v, token...)
 		}
-	})
+	} else {
+		t.AddEvent(eventin, func() {
+			for k, v := range events {
+				t.AddEvent(k, v, token...)
+			}
+		})
+	}
+
 	t.AddEvent(eventout, func() {
 		for k, v := range events {
 			t.RemoveEvent(k, v, token...)
+		}
+	})
+}
+func (t *LineEvent) RangeForOther(e Events, eventin, eventout string, events map[string]interface{}, token ...interface{}) {
+
+	tok := append(token, t)
+	if eventin == "" {
+		for k, v := range events {
+			e.AddEvent(k, v, tok...)
+		}
+	} else {
+		t.AddEvent(eventin, func() {
+			for k, v := range events {
+				e.AddEvent(k, v, tok...)
+			}
+		})
+	}
+
+	t.AddEvent(eventout, func() {
+		for k, v := range events {
+			e.RemoveEvent(k, v, tok...)
 		}
 	})
 }
