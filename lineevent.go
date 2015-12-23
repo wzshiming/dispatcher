@@ -5,6 +5,7 @@ import (
 	"reflect"
 
 	"github.com/codegangsta/inject"
+	"github.com/wzshiming/base"
 )
 
 type LineEvent struct {
@@ -221,43 +222,28 @@ func (t *LineEvent) EmptyEvent(eventName string) {
 	delete(t.listeners, eventName)
 }
 
-func (t *LineEvent) Range(eventin, eventout string, events map[string]interface{}, token ...interface{}) {
-	if eventin == "" {
-		for k, v := range events {
-			t.AddEvent(k, v, token...)
-		}
-	} else {
-		t.AddEvent(eventin, func() {
-			for k, v := range events {
-				t.AddEvent(k, v, token...)
-			}
-		})
-	}
-
-	t.AddEvent(eventout, func() {
-		for k, v := range events {
-			t.RemoveEvent(k, v, token...)
-		}
-	})
+func (t *LineEvent) Range(eventin, eventout string, events map[string]interface{}) {
+	t.RangeForOther(t, eventin, eventout, events)
 }
-func (t *LineEvent) RangeForOther(e Events, eventin, eventout string, events map[string]interface{}, token ...interface{}) {
+func (t *LineEvent) RangeForOther(e Events, eventin, eventout string, events map[string]interface{}) {
 
-	tok := append(token, t)
+	sss := base.RandString()
+
 	if eventin == "" {
 		for k, v := range events {
-			e.AddEvent(k, v, tok...)
+			e.AddEvent(k, v, sss)
 		}
 	} else {
 		t.AddEvent(eventin, func() {
 			for k, v := range events {
-				e.AddEvent(k, v, tok...)
+				e.AddEvent(k, v, sss)
 			}
-		})
+		}, e, sss)
 	}
 
 	t.AddEvent(eventout, func() {
 		for k, v := range events {
-			e.RemoveEvent(k, v, tok...)
+			e.RemoveEvent(k, v, sss)
 		}
-	})
+	}, e, sss)
 }

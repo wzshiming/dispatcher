@@ -8,8 +8,8 @@ type Events interface {
 	RemoveEvent(eventName string, callback interface{}, token ...interface{})
 	RemoveEventIndex(eventName string, index string)
 	EventSize(eventName string) int
-	Range(eventin, eventout string, events map[string]interface{}, token ...interface{})
-	RangeForOther(e Events, eventin string, eventout string, events map[string]interface{}, token ...interface{})
+	Range(eventin, eventout string, events map[string]interface{})
+	RangeForOther(e Events, eventin string, eventout string, events map[string]interface{})
 	StopOnce(eventName string)
 	IsOpen(eventName string) bool
 	CloseEvent(eventName string)
