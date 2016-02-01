@@ -2,10 +2,11 @@ package dispatcher
 
 import (
 	"fmt"
+	"math/rand"
 	"reflect"
+	"strconv"
 
 	"github.com/codegangsta/inject"
-	"github.com/wzshiming/base"
 )
 
 type LineEvent struct {
@@ -227,7 +228,8 @@ func (t *LineEvent) Range(eventin, eventout string, events map[string]interface{
 }
 func (t *LineEvent) RangeForOther(e Events, eventin, eventout string, events map[string]interface{}) {
 
-	sss := base.RandString()
+	var randNum = strconv.Itoa(rand.Int())
+	sss := randNum[0:6]
 
 	if eventin == "" {
 		for k, v := range events {
