@@ -2,10 +2,9 @@ package dispatcher
 
 type Events interface {
 	dispatchEvent(event *event)
-	AddEvent(eventName string, callback interface{}, token ...interface{}) string
-	OnlyOnce(eventName string, callback interface{}, token ...interface{}) string
-	OnlyTimes(eventName string, size int, callback interface{}, token ...interface{}) string
-	RemoveEvent(eventName string, callback interface{}, token ...interface{})
+	AddEvent(eventName string, callback interface{}) *eventLine
+	OnlyOnce(eventName string, callback interface{}) *eventLine
+	OnlyTimes(eventName string, size int, callback interface{}) *eventLine
 	RemoveEventIndex(eventName string, index string)
 	EventSize(eventName string) int
 	Range(eventin, eventout string, events map[string]interface{})

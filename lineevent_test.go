@@ -19,6 +19,7 @@ func (t *MClass) Start() {
 	dis0 := NewForkEvent(f)
 	dis0.AddEvent("test", t.onTest)
 	dis0.AddEvent("test", "test2")
+	dis0.OnlyOnce("test", t.onTest4)
 	dis0.AddEvent("test2", t.onTest2)
 
 	dis0.AddEvent("test", t.onTest3)
@@ -39,4 +40,8 @@ func (t *MClass) onTest2(a string, b int, c *uint) {
 
 func (t *MClass) onTest3(a string, b int, c *uint) {
 	t.t.Log("onTest3", a, b)
+}
+
+func (t *MClass) onTest4(a string) {
+	t.t.Log("onTest4", a)
 }

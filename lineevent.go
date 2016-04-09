@@ -6,6 +6,7 @@ import (
 
 	"github.com/codegangsta/inject"
 	"github.com/wzshiming/base"
+	"github.com/wzshiming/slicefunc"
 )
 
 type LineEvent struct {
@@ -15,7 +16,6 @@ type LineEvent struct {
 
 type chain struct {
 	v *reflect.Value
-	f int
 }
 type LineEventChain struct {
 	callbacks map[string]*chain
@@ -90,12 +90,6 @@ func (t *LineEvent) dispatchEvent(even *event) {
 							continue
 						}
 					}
-					if item.f != 0 {
-						item.f--
-						if item.f == 0 {
-							t.RemoveEventIndex(even.eventName, k)
-						}
-					}
 				}
 			}
 		}
@@ -140,32 +134,44 @@ func (t *LineEvent) codes(i interface{}, j []interface{}) string {
 	return k
 }
 
-func (t *LineEvent) addEvent(eventName string, size int, callback interface{}, token []interface{}) string {
+func (t *LineEvent) addEvent(eventName string, callback interface{}) *eventLine {
 	eventChain := t.getChain(eventName)
 	elem := reflect.ValueOf(callback)
-
-	k := t.codes(callback, token)
-
-	if eventChain.callbacks[k] != nil {
-		return k
+	var k string
+	for {
+		k = base.RandString()
+		if eventChain.callbacks[k] == nil {
+			break
+		}
 	}
 	eventChain.callbacks[k] = &chain{
 		v: &elem,
-		f: size,
 	}
-	return k
+	return newEventLine(eventName, k, t, callback)
 }
 
-func (t *LineEvent) AddEvent(eventName string, callback interface{}, token ...interface{}) string {
-	return t.addEvent(eventName, 0, callback, token)
+// 添加事件
+func (t *LineEvent) AddEvent(eventName string, callback interface{}) *eventLine {
+	return t.addEvent(eventName, callback)
 }
 
-func (t *LineEvent) OnlyOnce(eventName string, callback interface{}, token ...interface{}) string {
-	return t.addEvent(eventName, 1, callback, token)
+// 添加事件只执行一次
+func (t *LineEvent) OnlyOnce(eventName string, callback interface{}) *eventLine {
+	return t.OnlyTimes(eventName, 1, callback)
 }
 
-func (t *LineEvent) OnlyTimes(eventName string, size int, callback interface{}, token ...interface{}) string {
-	return t.addEvent(eventName, size, callback, token)
+// 添加事件 执行限定次数
+func (t *LineEvent) OnlyTimes(eventName string, size int, callback interface{}) *eventLine {
+	i := 0
+	var e *eventLine
+	sf := func() {
+		i++
+		if i == size {
+			e.Close()
+		}
+	}
+	e = t.addEvent(eventName, slicefunc.Join(callback, callback, sf))
+	return e
 }
 
 func (t *LineEvent) StopOnce(eventName string) {
@@ -206,10 +212,6 @@ func (t *LineEvent) EventSize(eventName string) int {
 	return 0
 }
 
-func (t *LineEvent) RemoveEvent(eventName string, callback interface{}, token ...interface{}) {
-	t.RemoveEventIndex(eventName, t.codes(callback, token))
-}
-
 func (t *LineEvent) Dispatch(eventName string, args ...interface{}) {
 	t.dispatchEvent(newEvent(eventName, args...))
 }
@@ -222,28 +224,30 @@ func (t *LineEvent) EmptyEvent(eventName string) {
 	delete(t.listeners, eventName)
 }
 
+// 为自己增减操作
 func (t *LineEvent) Range(eventin, eventout string, events map[string]interface{}) {
 	t.RangeForOther(t, eventin, eventout, events)
 }
+
+// 当某个状态时为另一个 事件集合 增减操作
 func (t *LineEvent) RangeForOther(e Events, eventin, eventout string, events map[string]interface{}) {
-
-	sss := base.RandString()
-
+	var el = newEventLines()
 	if eventin == "" {
 		for k, v := range events {
-			e.AddEvent(k, v, sss)
+			el.Append(e.AddEvent(k, v))
 		}
+		t.OnlyOnce(eventout, func() {
+			el.Close()
+		})
 	} else {
 		t.AddEvent(eventin, func() {
 			for k, v := range events {
-				e.AddEvent(k, v, sss)
+				el.Append(e.AddEvent(k, v))
 			}
-		}, e, sss)
+		})
+		t.AddEvent(eventout, func() {
+			el.Close()
+		})
 	}
 
-	t.AddEvent(eventout, func() {
-		for k, v := range events {
-			e.RemoveEvent(k, v, sss)
-		}
-	}, e, sss)
 }
