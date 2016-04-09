@@ -1,4 +1,4 @@
-package dispatcher
+ï»¿package dispatcher
 
 import (
 	"fmt"
@@ -150,17 +150,17 @@ func (t *LineEvent) addEvent(eventName string, callback interface{}) *eventLine 
 	return newEventLine(eventName, k, t, callback)
 }
 
-// Ìí¼ÓÊÂ¼ş
+// æ·»åŠ äº‹ä»¶
 func (t *LineEvent) AddEvent(eventName string, callback interface{}) *eventLine {
 	return t.addEvent(eventName, callback)
 }
 
-// Ìí¼ÓÊÂ¼şÖ»Ö´ĞĞÒ»´Î
+// æ·»åŠ äº‹ä»¶åªæ‰§è¡Œä¸€æ¬¡
 func (t *LineEvent) OnlyOnce(eventName string, callback interface{}) *eventLine {
 	return t.OnlyTimes(eventName, 1, callback)
 }
 
-// Ìí¼ÓÊÂ¼ş Ö´ĞĞÏŞ¶¨´ÎÊı
+// æ·»åŠ äº‹ä»¶ æ‰§è¡Œé™å®šæ¬¡æ•°
 func (t *LineEvent) OnlyTimes(eventName string, size int, callback interface{}) *eventLine {
 	i := 0
 	var e *eventLine
@@ -224,12 +224,12 @@ func (t *LineEvent) EmptyEvent(eventName string) {
 	delete(t.listeners, eventName)
 }
 
-// Îª×Ô¼ºÔö¼õ²Ù×÷
+// ä¸ºè‡ªå·±å¢å‡æ“ä½œ
 func (t *LineEvent) Range(eventin, eventout string, events map[string]interface{}) {
 	t.RangeForOther(t, eventin, eventout, events)
 }
 
-// µ±Ä³¸ö×´Ì¬Ê±ÎªÁíÒ»¸ö ÊÂ¼ş¼¯ºÏ Ôö¼õ²Ù×÷
+// å½“æŸä¸ªçŠ¶æ€æ—¶ä¸ºå¦ä¸€ä¸ª äº‹ä»¶é›†åˆ å¢å‡æ“ä½œ
 func (t *LineEvent) RangeForOther(e Events, eventin, eventout string, events map[string]interface{}) {
 	var el = newEventLines()
 	if eventin == "" {
@@ -251,3 +251,4 @@ func (t *LineEvent) RangeForOther(e Events, eventin, eventout string, events map
 	}
 
 }
+
