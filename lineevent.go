@@ -150,17 +150,17 @@ func (t *LineEvent) addEvent(eventName string, callback interface{}) *eventLine 
 	return newEventLine(eventName, k, t, callback)
 }
 
-// æ·»åŠ äº‹ä»¶
+// Ìí¼ÓÊÂ¼ş
 func (t *LineEvent) AddEvent(eventName string, callback interface{}) *eventLine {
 	return t.addEvent(eventName, callback)
 }
 
-// æ·»åŠ äº‹ä»¶åªæ‰§è¡Œä¸€æ¬¡
+// Ìí¼ÓÊÂ¼şÖ»Ö´ĞĞÒ»´Î
 func (t *LineEvent) OnlyOnce(eventName string, callback interface{}) *eventLine {
 	return t.OnlyTimes(eventName, 1, callback)
 }
 
-// æ·»åŠ äº‹ä»¶ æ‰§è¡Œé™å®šæ¬¡æ•°
+// Ìí¼ÓÊÂ¼ş Ö´ĞĞÏŞ¶¨´ÎÊı
 func (t *LineEvent) OnlyTimes(eventName string, size int, callback interface{}) *eventLine {
 	i := 0
 	var e *eventLine
@@ -224,12 +224,12 @@ func (t *LineEvent) EmptyEvent(eventName string) {
 	delete(t.listeners, eventName)
 }
 
-// ä¸ºè‡ªå·±å¢å‡æ“ä½œ
+// Îª×Ô¼ºÔö¼õ²Ù×÷
 func (t *LineEvent) Range(eventin, eventout string, events map[string]interface{}) {
 	t.RangeForOther(t, eventin, eventout, events)
 }
 
-// å½“æŸä¸ªçŠ¶æ€æ—¶ä¸ºå¦ä¸€ä¸ª äº‹ä»¶é›†åˆ å¢å‡æ“ä½œ
+// µ±Ä³¸ö×´Ì¬Ê±ÎªÁíÒ»¸ö ÊÂ¼ş¼¯ºÏ Ôö¼õ²Ù×÷
 func (t *LineEvent) RangeForOther(e Events, eventin, eventout string, events map[string]interface{}) {
 	var el = newEventLines()
 	if eventin == "" {
