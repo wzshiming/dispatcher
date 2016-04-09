@@ -1,4 +1,4 @@
-﻿package dispatcher
+package dispatcher
 
 import (
 	"fmt"
@@ -251,4 +251,3 @@ func (t *LineEvent) RangeForOther(e Events, eventin, eventout string, events map
 	}
 
 }
-
