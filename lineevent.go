@@ -170,7 +170,7 @@ func (t *LineEvent) OnlyTimes(eventName string, size int, callback interface{}) 
 			e.Close()
 		}
 	}
-	e = t.addEvent(eventName, slicefunc.Join(callback, callback, sf))
+	e = t.addEvent(eventName, slicefunc.Join(callback, sf))
 	return e
 }
 
